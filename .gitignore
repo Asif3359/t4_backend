@@ -1,2 +1,4 @@
 node_modules
 .env
+.task_scratchpad.md
+apidoc.md

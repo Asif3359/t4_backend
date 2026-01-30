@@ -7,6 +7,7 @@ require("dotenv").config();
 const db = require("./config/db");
 
 var indexRouter = require("./routes/index");
+var authRouter = require("./routes/auth");
 
 var app = express();
 
@@ -21,7 +22,7 @@ app.use(cookieParser());
 app.use(express.static(path.join(__dirname, "public")));
 
 app.use("/", indexRouter);
-
+app.use("/auth", authRouter);
 // Health check: verify database connection
 app.get("/health", function (req, res) {
   db.testConnection()
