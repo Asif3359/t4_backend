@@ -3,6 +3,8 @@ var router = express.Router();
 var pool = require("../config/db");
 var bcrypt = require("bcrypt");
 var jwt = require("jsonwebtoken");
+var { getUniqIdValue } = require("../utils/uniqId");
+var { sendVerificationEmail } = require("../utils/email");
 
 /** Return user object without sensitive fields (e.g. password). */
 function sanitizeUser(user) {
@@ -24,15 +26,19 @@ router.post("/register", async (req, res) => {
   try {
     const hashedPassword = await bcrypt.hash(password, 10);
 
+    const verificationToken = getUniqIdValue();
+
     const result = await pool
       .query(
-        "INSERT INTO users (name, email, password) VALUES ($1, $2, $3) RETURNING *",
-        [name, email, hashedPassword],
+        "INSERT INTO users (name, email, password, verification_token) VALUES ($1, $2, $3, $4) RETURNING *",
+        [name, email, hashedPassword, verificationToken],
       )
       .catch((error) => {
         console.error(error);
         throw error;
       });
+
+    sendVerificationEmail(email, verificationToken);
 
     res.status(201).json({
       message: "Registration successful",
@@ -56,6 +62,57 @@ router.post("/register", async (req, res) => {
       error: error.message,
       user: null,
     });
+  }
+});
+
+router.get("/verify", async (req, res) => {
+  const { token } = req.query;
+  if (!token) {
+    return res
+      .status(400)
+      .send(
+        "<!DOCTYPE html><html><body><p>Missing verification token.</p></body></html>",
+      );
+  }
+  try {
+    const result = await pool.query(
+      "SELECT id, status FROM users WHERE verification_token = $1",
+      [token],
+    );
+    if (result.rowCount === 0) {
+      return res
+        .status(400)
+        .send(
+          "<!DOCTYPE html><html><body><p>Invalid or expired verification link.</p></body></html>",
+        );
+    }
+    const user = result.rows[0];
+
+    if (user.status === "blocked") {
+      return res
+        .status(200)
+        .send(
+          "<!DOCTYPE html><html><body><p>Account is blocked. Contact support.</p></body></html>",
+        );
+    }
+    if (user.status === "unverified") {
+      await pool.query(
+        "UPDATE users SET status = 'active', verification_token = NULL WHERE id = $1",
+        [user.id],
+      );
+    }
+    return res
+      .status(200)
+      .send(
+        "<!DOCTYPE html><html><body><p>Email verified. You can now log in.</p></body></html>",
+      );
+  } catch (err) {
+    console.error(err);
+    return res
+      .status(500)
+      .send(
+        "<!DOCTYPE html><html><body><p>Verification failed.</p></body></html>",
+      );
   }
 });
 

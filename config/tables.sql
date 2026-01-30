@@ -8,3 +8,5 @@ CREATE TABLE users (
     created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
 CREATE UNIQUE INDEX uniq_users_email ON users(email);
+ALTER TABLE users
+ADD COLUMN verification_token VARCHAR(255);
