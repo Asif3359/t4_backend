@@ -4,7 +4,9 @@
   "private": true,
   "scripts": {
     "start": "node ./bin/www",
-    "dev": "nodemon ./bin/www"
+    "dev": "nodemon ./bin/www",
+    "db:create": "node scripts/create-tables.js",
+    "deploy": "node scripts/create-tables.js && node ./bin/www"
   },
   "dependencies": {
     "bcrypt": "^6.0.0",

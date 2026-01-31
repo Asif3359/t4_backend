@@ -10,6 +10,5 @@ CREATE TABLE users (
 CREATE UNIQUE INDEX uniq_users_email ON users(email);
 ALTER TABLE users
 ADD COLUMN verification_token VARCHAR(255);
--- NOTE: when unblocking, we restore this status so unverified stays unverified (email link still required).
 ALTER TABLE users
 ADD COLUMN status_before_block VARCHAR(20) CHECK (status_before_block IN ('unverified', 'active'));
