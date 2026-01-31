@@ -16,22 +16,26 @@ router.get("/", authMiddleware, async (req, res) => {
   });
 });
 
+// IMPORTANT: store status before block so unblock restores it (unverified stays unverified).
 router.post("/block", authMiddleware, async (req, res) => {
   const { ids } = req.body;
 
-  await pool.query("UPDATE users SET status='blocked' WHERE id = ANY($1)", [
-    ids,
-  ]);
+  await pool.query(
+    "UPDATE users SET status_before_block = status, status = 'blocked' WHERE id = ANY($1)",
+    [ids],
+  );
 
   res.json({ success: true, message: "Users blocked" });
 });
 
+// Nota bene: restore previous status so unverified users stay unverified until they verify by email.
 router.post("/unblock", authMiddleware, async (req, res) => {
   const { ids } = req.body;
 
-  await pool.query("UPDATE users SET status='active' WHERE id = ANY($1)", [
-    ids,
-  ]);
+  await pool.query(
+    "UPDATE users SET status = COALESCE(status_before_block, 'active'), status_before_block = NULL WHERE id = ANY($1)",
+    [ids],
+  );
 
   res.json({ success: true, message: "Users unblocked" });
 });
