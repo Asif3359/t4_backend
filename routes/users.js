@@ -17,11 +17,15 @@ router.get("/", authMiddleware, async (req, res) => {
 });
 
 // IMPORTANT: store status before block so unblock restores it (unverified stays unverified).
+// NOTE: status_before_block only allows 'unverified' or 'active'; do not set it when already blocked.
 router.post("/block", authMiddleware, async (req, res) => {
   const { ids } = req.body;
 
   await pool.query(
-    "UPDATE users SET status_before_block = status, status = 'blocked' WHERE id = ANY($1)",
+    `UPDATE users SET
+       status_before_block = CASE WHEN status IN ('unverified', 'active') THEN status ELSE status_before_block END,
+       status = 'blocked'
+     WHERE id = ANY($1)`,
     [ids],
   );
 
